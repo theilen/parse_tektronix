@@ -9,7 +9,7 @@ import numpy as np
 import os.path
 
 
-def read_curve(binaryfile):
+def parse_curve(binaryfile):
     """
     Reads one tektronix .isf file and returns a dictionary containing
     all tags as keys. The actual data is stored in the key "data".
@@ -67,7 +67,6 @@ def _read_data(bfile, position, header):
     Reads in the binary data as numpy array.
     Apparently, there are only 1d-signals stored in .isf files, so a 1d-array
     is read.
-    Returns a 2d-array with timepoints and datapoints aligned.
     """
     # determine the datatype from header tags
     datatype = ">" if header["BYT_OR"] == "MSB" else "<"
@@ -84,11 +83,4 @@ def _read_data(bfile, position, header):
     # calculate true values
     data = data * float(header["YMULT"]) + float(header["YZERO"])
 
-    # create timepoints
-    t = np.arange(data.size)
-    t = t * float(header["XINCR"]) + float(header["XZERO"])
-
-    # create single array
-    res = np.concatenate((t[None, :], data[None, :]), axis=0)
-
-    return res
+    return data
