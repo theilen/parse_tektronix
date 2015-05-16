@@ -5,11 +5,11 @@ Created on Sat May 16 13:38:03 2015
 @author: Sebastian Theilenberg
 """
 
-import os.listdir
+from os import listdir
 import os.path
 import numpy as np
 
-from .parse_isf import read_curve
+from .parse_isf import parse_curve
 
 
 def read_isf(filename):
@@ -31,13 +31,13 @@ def read_isf_files(filename, additional=True):
     base, ext = os.path.splitext(base)
 
     # check for right file type
-    extensions = set(".isf")
+    extensions = set([".isf"])
     if ext.lower() not in extensions:
-        raise ValueError("File type unkown.")
+        raise ValueError("File type unkown ({}).".format(ext.lower()))
 
     # find additional files
     if additional:
-        files = [f for f in os.listdir(root)
+        files = [f for f in listdir(root)
                  if f.endswith(ext) and f.startswith(base[:-1])
                  ]
         files.sort()
@@ -47,7 +47,7 @@ def read_isf_files(filename, additional=True):
     # parse files
     data = []
     for f in files:
-        data.append(read_curve(f))
+        data.append(parse_curve(f))
 
     # remove datasets with different time domains
     if len(files) > 1:
