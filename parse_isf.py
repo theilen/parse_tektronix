@@ -9,41 +9,45 @@ import numpy as np
 import os.path
 
 
-def parse_curve(binaryfile):
+def parse_curve(isf_file):
     """
     Reads one tektronix .isf file and returns a dictionary containing
     all tags as keys. The actual data is stored in the key "data".
     """
     extensions = set([".isf"])
-    if os.path.splitext(binaryfile)[-1].lower() not in extensions:
+    if os.path.splitext(isf_file)[-1].lower() not in extensions:
         raise ValueError("File type unkown.")
 
-    with open(binaryfile, 'rb') as bfile:
-
+    with open(isf_file, 'rb') as ifile:
         # read header
         header = {}
-        current = 0
-
+        currentposition = 0
         while True:
-
-            current, name = _read_chunk(bfile, " ")
-
+            currentposition, name = _read_chunk(ifile, " ")
             if name != ":CURVE":
-                current, value = _read_chunk(bfile, ";")
+                currentposition, value = _read_chunk(ifile, ";")
 
                 assert name not in header
                 header[name] = value
             else:
-                # ":CURVE" is the last tag of the header, followed by
-                # a '#' and a 7 digit number.
-                header[name] = bfile.read(8)
-                current = bfile.tell()
+                # ":CURVE " is the last tag of the header, followed by
+                # '#XYYY' with X being the number of bytes of YYY.
+                # YYY is the length of the datastream following in bytes.
+                value = ifile.read(2)
+                y_str = ifile.read(int(value[-1]))
+                value += y_str
+
+                assert int(y_str) == (
+                    int(header["NR_PT"]) * int(header[":WFMPRE:BYT_NR"])
+                    )
+                header[name] = value
+                currentposition = ifile.tell()
                 break
 
         assert header["ENCDG"] == "BINARY"
 
         # read data as numpy array
-        header["data"] = _read_data(bfile, current, header)
+        header["data"] = _read_data(ifile, currentposition, header)
 
     return header
 
@@ -53,11 +57,20 @@ def _read_chunk(headerfile, delimiter):
     Reads one chunk of header data. Based on delimiter, this may be a tag
     (ended by " ") or the value of a tag (ended by ";").
     """
+    prior_delimiter = None
     chunk = []
     while True:
         c = headerfile.read(1)
         if c != delimiter:
             chunk.append(c)
+            if c == '"':
+                # switch delimiter to make sure to parse the whole string
+                # enclosed in '"'.
+                delimiter, prior_delimiter = c, delimiter
+        elif prior_delimiter:
+            # switch back delimiter
+            chunk.append(c)
+            delimiter, prior_delimiter = prior_delimiter, None
         else:
             return headerfile.tell(), "".join(chunk)
 
