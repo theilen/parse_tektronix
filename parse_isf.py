@@ -21,11 +21,10 @@ def parse_curve(isf_file):
     with open(isf_file, 'rb') as ifile:
         # read header
         header = {}
-        currentposition = 0
         while True:
-            currentposition, name = _read_chunk(ifile, " ")
+            name = _read_chunk(ifile, " ")
             if name != ":CURVE":
-                currentposition, value = _read_chunk(ifile, ";")
+                value = _read_chunk(ifile, ";")
 
                 assert name not in header
                 header[name] = value
@@ -37,9 +36,12 @@ def parse_curve(isf_file):
                 y_str = ifile.read(int(value[-1]))
                 value += y_str
 
-                assert int(y_str) == (
-                    int(header["NR_PT"]) * int(header[":WFMPRE:BYT_NR"])
-                    )
+                # the number of bytes might be present with or without the
+                # preceding header ":WFMPRE:"
+                nobytes = header.get("BYT_NR",
+                                     header.get(":WFMPRE:BYT_NR", "0")
+                                     )
+                assert int(y_str) == int(header["NR_PT"]) * int(nobytes)
                 header[name] = value
                 currentposition = ifile.tell()
                 break
@@ -72,7 +74,7 @@ def _read_chunk(headerfile, delimiter):
             chunk.append(c)
             delimiter, prior_delimiter = prior_delimiter, None
         else:
-            return headerfile.tell(), "".join(chunk)
+            return "".join(chunk)
 
 
 def _read_data(bfile, position, header):
@@ -87,7 +89,12 @@ def _read_data(bfile, position, header):
         datatype += "i"
     else:
         datatype += "u"
-    datatype += header[":WFMPRE:BYT_NR"]
+    # BYT_NR might be present with preceding header ":WFMPRE:BYT_NR"
+    nobytes = header.get("BYT_NR",
+                         header.get(":WFMPRE:BYT_NR", "")
+                         )
+    datatype += nobytes
+    assert len(datatype) >= 3
 
     bfile.seek(position)
     data = np.fromfile(bfile, datatype)
