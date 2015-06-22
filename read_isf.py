@@ -20,7 +20,7 @@ def read_isf(filename):
     return read_isf_files(filename, additional=False)
 
 
-def read_isf_files(filename, additional=True):
+def read_isf_files(filename, additional=True, split_additional_after='_'):
     """
     Reads and parses .isf files. Since multiple channels end up in different
     files, it is attempted to restore the whole data by searching for
@@ -29,6 +29,9 @@ def read_isf_files(filename, additional=True):
     """
     root, base = os.path.split(filename)
     base, ext = os.path.splitext(base)
+    print root, base, ext
+    if additional:
+        add_base = base.split(split_additional_after)[0]
 
     # check for right file type
     extensions = set([".isf"])
@@ -38,7 +41,7 @@ def read_isf_files(filename, additional=True):
     # find additional files
     if additional:
         files = [f for f in listdir(root)
-                 if f.endswith(ext) and f.startswith(base[:-1])
+                 if f.endswith(ext) and f.startswith(add_base[:-1])
                  ]
         files.sort()
     else:
@@ -47,7 +50,7 @@ def read_isf_files(filename, additional=True):
     # parse files
     data = []
     for f in files:
-        data.append(parse_curve(f))
+        data.append(parse_curve(os.path.join(root, f)))
 
     # remove datasets with different time domains
     if len(files) > 1:
