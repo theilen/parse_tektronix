@@ -50,7 +50,7 @@ def read_isf_files(filename, additional=True, split_additional_after='_'):
     # parse files
     data = []
     for f in files:
-        data.append(parse_curve(f))
+        data.append(parse_curve(os.path.join(root, f)))
 
     # remove datasets with different time domains
     if len(files) > 1:
