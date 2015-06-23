@@ -101,6 +101,11 @@ def _read_data(bfile, position, header):
     assert data.size == int(header["NR_PT"])
 
     # calculate true values
-    data = data * float(header["YMULT"]) + float(header["YZERO"])
+    # offset in digitizing levels is "YOFF"
+    # factor to convert digitizing levels to physical units is "YMULT"
+    # TODO: offset might be present in physical units in "YZERO" instead
+    offset = float(header["YOFF"])
+    factor = float(header["YMULT"])
+    data = (data - offset) * factor
 
     return data
